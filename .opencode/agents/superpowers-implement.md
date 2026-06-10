@@ -4,7 +4,19 @@ description: Implement a single task from a plan with test-driven development an
 mode: subagent
 permission:
   edit: allow
-  bash: allow
+  bash:
+    "*": allow
+    "rm *": ask
+    "rmdir *": ask
+    "unlink *": ask
+    "sudo *": ask
+    "chmod *": ask
+    "chown *": ask
+    "git push*--force*": ask
+    "git push*-f*": ask
+    "git reset*--hard*": ask
+    "git clean*": ask
+    "git rebase*": ask
   webfetch: allow
 ---
 

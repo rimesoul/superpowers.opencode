@@ -39,9 +39,9 @@ This fork uses a carefully designed permission policy that balances security and
 
 | Subagent | edit | bash | Notes |
 |----------|------|------|-------|
-| `superpowers-implement` | allow | allow | Responsible for implementation; needs full edit and execution access |
-| `superpowers-review-spec` | deny | allow (no git push) | Reviews spec compliance only; no code modification |
-| `superpowers-review-code` | deny | allow (no git push) | Reviews code quality only; no code modification |
+| `superpowers-implement` | allow | allow (dangerous ops → ask) | Full implementation access with safety gates |
+| `superpowers-review-spec` | deny | read-only (destructive ops → deny) | Spec compliance review only |
+| `superpowers-review-code` | deny | read-only (destructive ops → deny) | Code quality review only |
 
 ## Agent Architecture
 

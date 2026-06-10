@@ -6,7 +6,20 @@ permission:
   edit: deny
   bash:
     "*": allow
+    "rm *": deny
+    "rmdir *": deny
+    "unlink *": deny
+    "sudo *": deny
+    "chmod *": deny
+    "chown *": deny
     "git push*": deny
+    "git commit*": deny
+    "git merge*": deny
+    "git rebase*": deny
+    "git reset*": deny
+    "git clean*": deny
+    "git stash*": deny
+    "git add*": deny
 ---
 
 You are a Senior Code Reviewer with expertise in software architecture, design

@@ -37,9 +37,9 @@ skills + subagents 方法论。本仓库将其剥离为 **OpenCode-only**，
 
 | 子代理 | edit | bash | 说明 |
 |--------|------|------|------|
-| `superpowers-implement` | allow | allow | 负责实现，需要完整编辑和执行权限 |
-| `superpowers-review-spec` | deny | allow（禁止 git push）| 只审查代码是否符合规格，禁止修改 |
-| `superpowers-review-code` | deny | allow（禁止 git push）| 只审查代码质量，禁止修改 |
+| `superpowers-implement` | allow | allow（危险操作为 ask）| 完整实现权限，带安全门禁 |
+| `superpowers-review-spec` | deny | 只读（破坏性操作为 deny）| 仅审查规格合规性 |
+| `superpowers-review-code` | deny | 只读（破坏性操作为 deny）| 仅审查代码质量 |
 
 ## Agent 架构
 
