@@ -12,7 +12,8 @@ permission:
   grep: allow
   todowrite: allow
   lsp: allow
-  external_directory: ask
+  external_directory:
+    "*": allow
   bash:
     "*": allow
     "rm *": ask

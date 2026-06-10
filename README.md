@@ -29,8 +29,8 @@ This fork uses a carefully designed permission policy that balances security and
 |------|---------|--------------|
 | `bash` | allow | `rm`/`rmdir`/`unlink` (file deletion), `sudo`/`chmod`/`chown` (privilege changes), `git push --force`/`git reset --hard`/`git clean`/`git rebase` (repo destruction) → **ask** |
 | `read` | allow | `.env*`/`*.pem`/files containing `secret`/`token`/`password`/`credential`/`private key` → **ask** |
-| `edit` | allow | Protected by `external_directory: ask` for out-of-workspace modifications |
-| `external_directory` | **ask** | Any file access outside the workspace requires confirmation |
+| `edit` | allow | Full edit access within workspace |
+| `external_directory` | allow | By default allow external directory access |
 | `task` | allow | Trusts the agent to dispatch subagents autonomously |
 | `webfetch` | allow | Allows autonomous fetching of web resources |
 | `glob`/`grep`/`lsp`/`todowrite` | allow | Purely read-only / non-destructive operations |

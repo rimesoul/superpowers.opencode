@@ -27,8 +27,8 @@ skills + subagents 方法论。本仓库将其剥离为 **OpenCode-only**，
 |------|----------|----------|
 | `bash` | allow | `rm`/`rmdir`/`unlink`（删除文件）、`sudo`/`chmod`/`chown`（权限变更）、`git push --force`/`git reset --hard`/`git clean`/`git rebase`（仓库破坏）→ **ask** |
 | `read` | allow | `.env*`/`*.pem`/包含 `secret`/`token`/`password`/`credential`/`private key` 的文件 → **ask** |
-| `edit` | allow | 由 `external_directory: ask` 保护工作区外文件修改 |
-| `external_directory` | **ask** | 任何工作区外的文件访问都需确认 |
+| `edit` | allow | 允许工作区内编辑 |
+| `external_directory` | allow | 默认允许访问外部目录 |
 | `task` | allow | 信任 agent 自主调度子代理 |
 | `webfetch` | allow | 允许自主获取网络资源 |
 | `glob`/`grep`/`lsp`/`todowrite` | allow | 纯只读/无破坏性操作 |
