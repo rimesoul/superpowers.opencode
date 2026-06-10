@@ -1,135 +1,125 @@
 /**
- * Superpowers plugin for OpenCode.ai
+ * Superpowers plugin for OpenCode
  *
- * Injects superpowers bootstrap context via system prompt transform.
- * Auto-registers skills directory via config hook (no symlinks needed).
+ * Registers skills directory and agents via config hook. No global context
+ * injection — the Superpowers workflow is activated by switching to the
+ * "superpowers" primary agent.
+ *
+ * Installation:
+ *   1. Clone this repo anywhere
+ *   2. Symlink this file to ~/.config/opencode/plugins/superpowers.js
+ *      OR add to ~/.config/opencode/opencode.json:
+ *        { "plugin": ["/absolute/path/to/superpowers.opencode/.opencode/plugins/superpowers.js"] }
+ *   3. Restart OpenCode
  */
 
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '../..');
+const agentsDir = path.resolve(__dirname, '../agents');
 
-// Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
-const extractAndStripFrontmatter = (content) => {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) return { frontmatter: {}, content };
-
-  const frontmatterStr = match[1];
-  const body = match[2];
-  const frontmatter = {};
-
-  for (const line of frontmatterStr.split('\n')) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx > 0) {
-      const key = line.slice(0, colonIdx).trim();
-      const value = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
-      frontmatter[key] = value;
-    }
-  }
-
-  return { frontmatter, content: body };
-};
-
-// Normalize a path: trim whitespace, expand ~, resolve to absolute
-const normalizePath = (p, homeDir) => {
-  if (!p || typeof p !== 'string') return null;
-  let normalized = p.trim();
-  if (!normalized) return null;
-  if (normalized.startsWith('~/')) {
-    normalized = path.join(homeDir, normalized.slice(2));
-  } else if (normalized === '~') {
-    normalized = homeDir;
-  }
-  return path.resolve(normalized);
-};
-
-// Module-level cache for bootstrap content.
-// The SKILL.md file does not change during a session, so reading + parsing it
-// once eliminates redundant fs.existsSync + fs.readFileSync + regex work on
-// every agent step.  See #1202 for the full analysis.
-let _bootstrapCache = undefined; // undefined = not yet loaded, null = file missing
+function readAgentPrompt(filename) {
+  const filePath = path.join(agentsDir, filename);
+  if (!fs.existsSync(filePath)) return null;
+  const content = fs.readFileSync(filePath, 'utf8');
+  const match = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
+  return match ? match[1].trim() : content.trim();
+}
 
 export const SuperpowersPlugin = async ({ client, directory }) => {
-  const homeDir = os.homedir();
-  const superpowersSkillsDir = path.resolve(__dirname, '../../skills');
-  const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
-  const configDir = envConfigDir || path.join(homeDir, '.config/opencode');
-
-  // Helper to generate bootstrap content (cached after first call)
-  const getBootstrapContent = () => {
-    // Return cached result on subsequent calls
-    if (_bootstrapCache !== undefined) return _bootstrapCache;
-
-    // Try to load using-superpowers skill
-    const skillPath = path.join(superpowersSkillsDir, 'using-superpowers', 'SKILL.md');
-    if (!fs.existsSync(skillPath)) {
-      _bootstrapCache = null;
-      return null;
-    }
-
-    const fullContent = fs.readFileSync(skillPath, 'utf8');
-    const { content } = extractAndStripFrontmatter(fullContent);
-
-    const toolMapping = `**Tool Mapping for OpenCode:**
-When skills reference tools you don't have, substitute OpenCode equivalents:
-- \`TodoWrite\` → \`todowrite\`
-- \`Task\` tool with subagents → Use OpenCode's subagent system (@mention)
-- \`Skill\` tool → OpenCode's native \`skill\` tool
-- \`Read\`, \`Write\`, \`Edit\`, \`Bash\` → Your native tools
-
-Use OpenCode's native \`skill\` tool to list and load skills.`;
-
-    _bootstrapCache = `<EXTREMELY_IMPORTANT>
-You have superpowers.
-
-**IMPORTANT: The using-superpowers skill content is included below. It is ALREADY LOADED - you are currently following it. Do NOT use the skill tool to load "using-superpowers" again - that would be redundant.**
-
-${content}
-
-${toolMapping}
-</EXTREMELY_IMPORTANT>`;
-
-    return _bootstrapCache;
-  };
+  const superpowersSkillsDir = path.join(repoRoot, 'skills');
 
   return {
-    // Inject skills path into live config so OpenCode discovers superpowers skills
-    // without requiring manual symlinks or config file edits.
-    // This works because Config.get() returns a cached singleton — modifications
-    // here are visible when skills are lazily discovered later.
     config: async (config) => {
+      // Register skills paths
       config.skills = config.skills || {};
       config.skills.paths = config.skills.paths || [];
       if (!config.skills.paths.includes(superpowersSkillsDir)) {
         config.skills.paths.push(superpowersSkillsDir);
       }
-    },
 
-    // Inject bootstrap into the first user message of each session.
-    // Using a user message instead of a system message avoids:
-    //   1. Token bloat from system messages repeated every turn (#750)
-    //   2. Multiple system messages breaking Qwen and other models (#894)
-    //
-    // The hook fires on every agent step (not just every turn) because
-    // opencode's prompt.ts reloads messages from DB each step.  Fresh message
-    // arrays may need injection again, so getBootstrapContent() must not do
-    // repeated disk work.
-    'experimental.chat.messages.transform': async (_input, output) => {
-      const bootstrap = getBootstrapContent();
-      if (!bootstrap || !output.messages.length) return;
-      const firstUser = output.messages.find(m => m.info.role === 'user');
-      if (!firstUser || !firstUser.parts.length) return;
+      // Register agents (don't overwrite user-defined agents)
+      config.agent = config.agent || {};
 
-      // Guard: skip if first user message already contains bootstrap.
-      // This prevents double injection when OpenCode passes an already
-      // transformed in-memory message array through the hook again.
-      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
+      if (!config.agent["superpowers"]) {
+        const prompt = readAgentPrompt("superpowers.md");
+        if (prompt) {
+          config.agent["superpowers"] = {
+            mode: "primary",
+            description:
+              "Primary agent for the Superpowers development methodology. Use for structured software development with brainstorming, spec-driven planning, subagent-driven TDD implementation, and code review.",
+            permission: {
+              skill: { "*": "allow" },
+              task: {
+                "*": "deny",
+                "superpowers-*": "allow",
+                explore: "allow",
+                general: "allow"
+              },
+              webfetch: "ask"
+            },
+            prompt
+          };
+        }
+      }
 
-      const ref = firstUser.parts[0];
-      firstUser.parts.unshift({ ...ref, type: 'text', text: bootstrap });
+      if (!config.agent["superpowers-implement"]) {
+        const prompt = readAgentPrompt("superpowers-implement.md");
+        if (prompt) {
+          config.agent["superpowers-implement"] = {
+            mode: "subagent",
+            description:
+              "Implement a single task from a plan with test-driven development and self-review. Dispatched by the superpowers primary agent per task.",
+            permission: {
+              edit: "allow",
+              bash: "allow",
+              webfetch: "allow"
+            },
+            prompt
+          };
+        }
+      }
+
+      if (!config.agent["superpowers-review-spec"]) {
+        const prompt = readAgentPrompt("superpowers-review-spec.md");
+        if (prompt) {
+          config.agent["superpowers-review-spec"] = {
+            mode: "subagent",
+            description:
+              "Review whether an implementation matches its specification. Checks for missing requirements, extra work, and misunderstandings.",
+            permission: {
+              edit: "deny",
+              bash: {
+                "*": "allow",
+                "git push*": "deny"
+              }
+            },
+            prompt
+          };
+        }
+      }
+
+      if (!config.agent["superpowers-review-code"]) {
+        const prompt = readAgentPrompt("superpowers-review-code.md");
+        if (prompt) {
+          config.agent["superpowers-review-code"] = {
+            mode: "subagent",
+            description:
+              "Review code quality, architecture, and testing of an implementation. Dispatched AFTER spec compliance review passes.",
+            permission: {
+              edit: "deny",
+              bash: {
+                "*": "allow",
+                "git push*": "deny"
+              }
+            },
+            prompt
+          };
+        }
+      }
     }
   };
 };
