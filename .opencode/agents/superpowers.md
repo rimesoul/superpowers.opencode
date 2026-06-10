@@ -14,6 +14,7 @@ permission:
   lsp: allow
   external_directory:
     "*": allow
+    ".config/opencode*": allow
   bash:
     "*": allow
     "rm *": ask
