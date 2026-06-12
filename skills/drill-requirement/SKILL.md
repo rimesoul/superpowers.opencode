@@ -16,8 +16,16 @@ skill does two things:
    is real, evaluate whether the effort is justified, and produce a structured
    recommendation.
 
-**Core principle:** Root cause first. "What problem are you trying to solve?" —
-not "What should we build?"
+**Core principles:**
+
+1. **Root cause first.** "What problem are you trying to solve?" — not "What
+   should we build?"
+2. **Objective, not agreeable.** Point out contradictions and weaknesses directly.
+   Do not flatter the user's idea.
+3. **Outside-in.** Look at existing solutions (web, GitHub) before committing to
+   building something new.
+4. **Right-size the process.** Not every request needs a full report. Many only need
+   a few questions.
 
 ## When to Use
 
@@ -44,6 +52,8 @@ once to confirm alignment before investing in research.
   login endpoint, 5 req/min/IP")
 - The user already has a detailed spec or design document ready
 - The user explicitly says they don't need clarification
+
+In these cases, the skill offers no value and should not be loaded.
 
 ## Two-Layer Model
 
@@ -162,7 +172,7 @@ Derive search keywords from the Problem Restatement and drill responses.
 Produce a structured Drill Report. Present the summary to the user for approval
 before writing the file.
 
-**Report file location:** `docs/superpowers/drills/YYYY-MM-DD-<topic>.md`
+**Report file location:** `docs/superpowers/drills/YYYY-MM-DD-<topic>.md` (The directory prefix may vary by project; `docs/superpowers/drills/` is the default for Superpowers projects.)
 
 **Report sections:**
 
@@ -192,8 +202,7 @@ before writing the file.
 
 drill-requirement does NOT prescribe what happens next. It is the caller's
 responsibility to decide whether to proceed to design, implementation, debugging,
-or end the conversation. When used within Superpowers, the typical next step is
-brainstorming — but this skill makes no assumption about its environment.
+or end the conversation. This skill makes no assumption about its environment.
 
 ## Common Mistakes
 
