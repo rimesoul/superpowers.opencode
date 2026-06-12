@@ -75,6 +75,7 @@ Key skills to load at the right moments:
 - `superpowers/requesting-code-review` — After completing tasks or features
 - `superpowers/receiving-code-review` — When responding to code review feedback
 - `superpowers/systematic-debugging` — When debugging complex issues
+- `superpowers/drill-requirement` — When a request is vague, ambiguous, or involves building something new from scratch
 - `superpowers/verification-before-completion` — Before declaring work complete
 - `superpowers/using-git-worktrees` — For isolated workspace creation
 - `superpowers/finishing-a-development-branch` — When all tasks are done
