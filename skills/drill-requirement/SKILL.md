@@ -57,32 +57,46 @@ In these cases, the skill offers no value and should not be loaded.
 
 ## Two-Layer Model
 
+Before entering the drill, the agent evaluates: does this request need drilling?
+
+| Verdict | Criteria |
+|---|---|
+| **Skip** | Bug fix, small change, clearly scoped, unambiguous. |
+| **Proceed** | Vague, complex, from-scratch creation, high design/investment cost. |
+
 ```
-Situation A: Vague                    Situation B: Large scope
-      │                                      │
-      ▼                                      ▼
-Lightweight Drill (Phase 1–2)          Full Drill
-      │                                (Phase 1, 3–4+Gate)
-      │                                      │
-      ├─ enough info → done                  │
-      │   (verbal alignment, no file)        │
-      │                                      │
-      └─ scope looks large → escalate        │
-              │                              │
-              └──────────┬───────────────────┘
-                         ▼
-                  Full Drill cont.
-                (Phase 3–4+Gate, skip Phase 1)
+Skip ──► Write drill report (record skip reason)
+
+Proceed:
+      │
+      ├─ Situation A: Vague                    Situation B: Large scope
+      │       │                                      │
+      │       ▼                                      ▼
+      │ Lightweight Drill (Phase 1–2)          Full Drill
+      │       │                                (Phase 1, 3–4+Gate)
+      │       │                                      │
+      │       ├─ enough info → done                  │
+      │       │                                      │
+      │       └─ scope looks large → escalate        │
+      │               │                              │
+      │               └──────────┬───────────────────┘
+      │                          ▼
+      │                   Full Drill cont.
+      │                 (Phase 3–4+Gate, skip Phase 1)
+      │
+      └─ All paths → write a drill report
 ```
 
 **Key rules:**
 
+- The agent evaluates Skip vs. Proceed before entering the drill.
 - Lightweight drill and full drill are two independent entry points.
 - When escalated from lightweight drill, Phase 1 (Restate) is skipped — it was
   already done.
 - When entering full drill directly (Situation B), Phase 1 is always performed.
 - During lightweight drill, if scope looks large, escalate to full drill automatically
   (do not ask for permission).
+- **Every outcome (Skip, Go, No-Go, Need More Info) produces a drill report file.**
 
 ## Lightweight Drill (Phase 1–2)
 
@@ -136,8 +150,7 @@ Uncover the root problem, context, pain level, and scope.
 ### End of Lightweight Drill
 
 When enough information is gathered (or 10 questions reached), the lightweight
-drill ends. You and the user have a shared, verbal understanding of the problem.
-No file is produced.
+drill ends. Write a drill report summarizing findings and the outcome.
 
 If you determined during the drill that full assessment is warranted, automatically
 proceed to Phase 3.
@@ -167,6 +180,9 @@ Execute this phase autonomously (no user interaction needed):
 
 Derive search keywords from the Problem Restatement and drill responses.
 
+For efficiency, the agent may dispatch a subagent to execute Phase 3 research
+in parallel while continuing user-facing interaction.
+
 ### Phase 4: Assess & Report
 
 Produce a structured Drill Report. Present the summary to the user for approval
@@ -190,6 +206,12 @@ before writing the file.
 2. User confirms or requests changes
 3. Write the file to the report location
 
+**Gate Checkpoint:**
+After presenting the summary, the agent MUST pause and obtain explicit user
+confirmation of the Gate outcome before writing the file or proceeding to
+any next step. The drill is not complete until the user has acknowledged
+the Gate.
+
 ### Gate
 
 | Outcome | Action |
@@ -200,9 +222,18 @@ before writing the file.
 
 ## After Drill
 
-drill-requirement does NOT prescribe what happens next. It is the caller's
-responsibility to decide whether to proceed to design, implementation, debugging,
-or end the conversation. This skill makes no assumption about its environment.
+When the drill is complete, the agent MUST write a drill report and restate
+the outcome to the user before taking any next step.
+
+| Outcome | Condition | Agent Action |
+|---|---|---|
+| **Skip** | Agent determined drilling is not needed (bug fix, small change, clearly scoped). | Record the skip reason in the drill report. |
+| **Go** | Gap is real, worth building. User explicitly confirms. | Write drill report with full assessment. Requirement validated. |
+| **No-Go** | Not worth pursuing. User MUST explicitly agree "no-go." | Write drill report with rationale. Do not proceed to design or implementation. |
+| **Need More Info** | Critical unknowns remain. | Write drill report with open questions noted. Return to Phase 2. |
+
+Every drill invocation produces a drill report file, regardless of outcome.
+The drill is not complete until the Gate outcome is confirmed by the user.
 
 ## Common Mistakes
 

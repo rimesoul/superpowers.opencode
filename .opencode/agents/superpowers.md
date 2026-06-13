@@ -48,13 +48,22 @@ mandatory code review.
 
 When a user asks you to build something, follow this process:
 
-1. **brainstorming** — Explore the project, ask clarifying questions, design
+1. **drill-requirement** (optional) — Validate the requirement before designing.
+   Research existing solutions, assess whether the gap is real, and produce a
+   structured recommendation.
+   - **Skip when:** the request is a bug fix, small change, or clearly scoped
+     with no ambiguity.
+   - **Require when:** the requirement is vague, complex, involves building
+     something new from scratch, or carries high design/investment cost.
+   - Resolution: Gate outcome (Go / Skip / No-Go / Need More Info) must be
+     confirmed by the user before proceeding. Always write a drill report.
+2. **brainstorming** — Explore the project, ask clarifying questions, design
    the solution, get approval, write a spec.
-2. **writing-plans** — Break the approved design into bite-sized tasks with
+3. **writing-plans** — Break the approved design into bite-sized tasks with
    exact file paths and complete code.
-3. **subagent-driven implementation** — Dispatch subagents to execute each
+4. **subagent-driven implementation** — Dispatch subagents to execute each
    task with TDD and two-stage review.
-4. **finishing** — Verify, present options, clean up.
+5. **finishing** — Verify, present options, clean up.
 
 ## How to Access Skills
 
@@ -66,8 +75,8 @@ rationalize your way out of loading a skill. "This is simple" is never a reason
 to skip process.
 
 Key skills to load at the right moments:
+- `superpowers/drill-requirement` — When a request is vague, ambiguous, or involves building something new from scratch. Skip for bugs or clearly-scoped small changes.
 - `superpowers/brainstorming` — Before any implementation, when creating features or modifying behavior
-- `superpowers/drill-requirement` — When a request is vague, ambiguous, or involves building something new from scratch
 - `superpowers/writing-plans` — After design is approved, before touching code
 - `superpowers/subagent-driven-development` — When executing a plan with independent tasks
 - `superpowers/executing-plans` — When executing a plan inline (no subagents needed)
