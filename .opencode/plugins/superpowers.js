@@ -21,12 +21,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const agentsDir = path.resolve(__dirname, '../agents');
 
-function readAgentPrompt(filename) {
-  const filePath = path.join(agentsDir, filename);
+function readMarkdownBody(filePath) {
   if (!fs.existsSync(filePath)) return null;
   const content = fs.readFileSync(filePath, 'utf8');
   const match = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
   return match ? match[1].trim() : content.trim();
+}
+
+function readAgentPrompt(filename) {
+  return readMarkdownBody(path.join(agentsDir, filename));
+}
+
+function readSkillContent(skillName) {
+  return readMarkdownBody(path.join(repoRoot, 'skills', skillName, 'SKILL.md'));
 }
 
 export const SuperpowersPlugin = async ({ client, directory }) => {
@@ -41,12 +48,22 @@ export const SuperpowersPlugin = async ({ client, directory }) => {
         config.skills.paths.push(superpowersSkillsDir);
       }
 
-      // Register agents (don't overwrite user-defined agents)
+      // Register agents. Always build the full superpowers prompt from
+      // the agent definition and the using-superpowers skill content.
+      // The .opencode/agents/superpowers.md file contains only a stub
+      // prompt (pointing to the plugin for content). When opencode is
+      // launched inside this repo, it auto-discovers that file and
+      // registers the agent with the stub prompt BEFORE this hook runs.
+      // We must detect the stub and replace it with the full prompt.
       config.agent = config.agent || {};
 
+      const agentBody = readAgentPrompt("superpowers.md");
+      const skillBody = readSkillContent("using-superpowers");
+      const fullPrompt = [agentBody, skillBody].filter(Boolean).join("\n\n");
+
       if (!config.agent["superpowers"]) {
-        const prompt = readAgentPrompt("superpowers.md");
-        if (prompt) {
+        // Fresh registration: no existing superpowers agent
+        if (fullPrompt) {
           config.agent["superpowers"] = {
             mode: "primary",
             description:
@@ -61,8 +78,24 @@ export const SuperpowersPlugin = async ({ client, directory }) => {
               },
               webfetch: "ask"
             },
-            prompt
+            prompt: fullPrompt
           };
+        }
+      } else if (fullPrompt) {
+        // Agent already exists (likely auto-discovered from
+        // .opencode/agents/superpowers.md). If its prompt is the
+        // stub (short and mentions "injected by the plugin"),
+        // replace it with the full methodology content. If the
+        // user defined their own superpowers agent with a custom
+        // prompt, respect that and leave it alone.
+        const existingPrompt = typeof config.agent["superpowers"].prompt === 'string'
+          ? config.agent["superpowers"].prompt
+          : '';
+        const isStub = existingPrompt.length < 200 &&
+          existingPrompt.includes("injected by the plugin");
+
+        if (isStub) {
+          config.agent["superpowers"].prompt = fullPrompt;
         }
       }
 
