@@ -53,6 +53,8 @@ Skills use OpenCode-native tool names:
 ```dot
 digraph skill_flow {
     "User message received" [shape=doublecircle];
+    "Vague, complex, new,\nor high investment?" [shape=diamond];
+    "Load drill-requirement\n(validate BEFORE designing)" [shape=box];
     "Already brainstormed?" [shape=diamond];
     "Load brainstorming skill" [shape=box];
     "Might any skill apply?" [shape=diamond];
@@ -63,11 +65,15 @@ digraph skill_flow {
     "Follow skill exactly" [shape=box];
     "Respond (including clarifications)" [shape=doublecircle];
 
+    "User message received" -> "Vague, complex, new,\nor high investment?";
+    "Vague, complex, new,\nor high investment?" -> "Load drill-requirement\n(validate BEFORE designing)" [label="yes"];
+    "Vague, complex, new,\nor high investment?" -> "Already brainstormed?" [label="no (bug fix,\nsmall change,\nclearly scoped)"];
+    "Load drill-requirement\n(validate BEFORE designing)" -> "Already brainstormed?";
+
     "Already brainstormed?" -> "Load brainstorming skill" [label="no"];
     "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
     "Load brainstorming skill" -> "Might any skill apply?";
 
-    "User message received" -> "Might any skill apply?";
     "Might any skill apply?" -> "Load skill via skill tool" [label="yes, even 1%"];
     "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
     "Load skill via skill tool" -> "Announce: 'Loading [skill] to [purpose]'";
@@ -96,15 +102,19 @@ These thoughts mean STOP—you're rationalizing:
 | "I'll just do this one thing first" | Check BEFORE doing anything. |
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
 | "I know what that means" | Knowing the concept ≠ using the skill. Load it. |
+| "This feels like brainstorming territory" | Drill-requirement comes BEFORE brainstorming. Is the requirement validated? |
+| "The user seems clear on what they want" | Vague signals: "discuss", "maybe", "question", "research". Don't confuse confidence with clarity. |
 
 ## Skill Priority
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (TDD, patterns) - these guide execution
+1. **Gate skills first** (drill-requirement) — validate the requirement BEFORE designing. Skip ONLY for bug fixes, small changes, or clearly-scoped requests with zero ambiguity.
+2. **Process skills second** (brainstorming, debugging) — determine HOW to approach the task
+3. **Implementation skills third** (TDD, patterns) — guide execution
 
-"Let's build X" → brainstorming first, then implementation skills.
+"Let's build X" (vague/complex/new) → drill-requirement first, then brainstorming, then implementation skills.
+"Let's build X" (clearly scoped) → brainstorming first, then implementation skills.
 "Fix this bug" → debugging first, then domain-specific skills.
 
 ## Skill Types
@@ -123,15 +133,15 @@ Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
 
 When a user asks you to build something, follow this process:
 
-1. **drill-requirement** (optional) — Validate the requirement before designing.
+1. **drill-requirement** — Validate the requirement BEFORE designing.
    Research existing solutions, assess whether the gap is real, and produce a
    structured recommendation.
-   - **Skip when:** the request is a bug fix, small change, or clearly scoped
-     with no ambiguity.
-   - **Require when:** the requirement is vague, complex, involves building
+   - **Skip ONLY when:** bug fix, small change, clearly scoped with zero
+     ambiguity. Even then, write a skip-entry drill report.
+   - **MANDATORY when:** the requirement is vague, complex, involves building
      something new from scratch, or carries high design/investment cost.
    - Resolution: Gate outcome (Go / Skip / No-Go / Need More Info) must be
-     confirmed by the user before proceeding. Always write a drill report.
+     confirmed by the user before proceeding.
 2. **brainstorming** — Explore the project, ask clarifying questions, design
    the solution, get approval, write a spec.
 3. **writing-plans** — Break the approved design into bite-sized tasks with
