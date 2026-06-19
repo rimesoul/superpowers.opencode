@@ -13,8 +13,10 @@ permission:
   todowrite: allow
   lsp: allow
   external_directory:
-    "*": allow
-    ".config/opencode*": allow
+    "*": ask
+    "*/.config/opencode/*": allow
+    "*.opencode/*": allow
+    "/tmp/*": allow
   bash:
     "*": allow
     "rm *": ask

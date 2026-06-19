@@ -1,9 +1,11 @@
 /**
  * Superpowers plugin for OpenCode
  *
- * Registers skills directory and agents via config hook. No global context
- * injection — the Superpowers workflow is activated by switching to the
- * "superpowers" primary agent.
+ * Two responsibilities:
+ *  1. Register the skills directory (config.skills.paths)
+ *  2. Register agents from .opencode/agents/*.md (config.agent[name])
+ *     - mode, description, permission from YAML frontmatter (never hardcoded)
+ *     - prompt from markdown body (subagents) or skills/using-superpowers/SKILL.md (primary agent)
  *
  * Installation:
  *   1. Clone this repo anywhere
@@ -21,136 +23,91 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const agentsDir = path.resolve(__dirname, '../agents');
 
-function readMarkdownBody(filePath) {
+function readMarkdownFile(filePath) {
   if (!fs.existsSync(filePath)) return null;
   const content = fs.readFileSync(filePath, 'utf8');
-  const match = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
-  return match ? match[1].trim() : content.trim();
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!match) return { body: content.trim() };
+  return { frontmatter: match[1].trim(), body: match[2].trim() };
 }
 
-function readAgentPrompt(filename) {
-  return readMarkdownBody(path.join(agentsDir, filename));
-}
+function parseYaml(yamlStr) {
+  const result = {};
+  const lines = yamlStr.split('\n');
+  const stack = [result];
+  const indentStack = [-1];
 
-function readSkillContent(skillName) {
-  return readMarkdownBody(path.join(repoRoot, 'skills', skillName, 'SKILL.md'));
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith('#')) continue;
+
+    const indent = line.search(/\S/);
+
+    while (indent <= indentStack[indentStack.length - 1] && stack.length > 1) {
+      stack.pop();
+      indentStack.pop();
+    }
+
+    const current = stack[stack.length - 1];
+    const kvMatch = trimmed.match(/^"?([^":]+)"?\s*:\s*(.+)$/);
+    const keyMatch = trimmed.match(/^"?([^":]+)"?\s*:$/);
+
+    if (kvMatch) {
+      let val = kvMatch[2].trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      current[kvMatch[1].trim()] = val;
+    } else if (keyMatch) {
+      const newObj = {};
+      current[keyMatch[1].trim()] = newObj;
+      stack.push(newObj);
+      indentStack.push(indent);
+    }
+  }
+
+  return result;
 }
 
 export const SuperpowersPlugin = async ({ client, directory }) => {
   const superpowersSkillsDir = path.join(repoRoot, 'skills');
+  const agentNames = ['superpowers', 'superpowers-implement', 'superpowers-review-spec', 'superpowers-review-code'];
 
   return {
     config: async (config) => {
-      // Register skills paths
+      // 1. Register skills path
       config.skills = config.skills || {};
       config.skills.paths = config.skills.paths || [];
       if (!config.skills.paths.includes(superpowersSkillsDir)) {
         config.skills.paths.push(superpowersSkillsDir);
       }
 
-      // Register agents. Always build the full superpowers prompt from
-      // the agent definition and the using-superpowers skill content.
-      // The .opencode/agents/superpowers.md file contains only a stub
-      // prompt (pointing to the plugin for content). When opencode is
-      // launched inside this repo, it auto-discovers that file and
-      // registers the agent with the stub prompt BEFORE this hook runs.
-      // We must detect the stub and replace it with the full prompt.
+      // 2. Register agents from markdown
       config.agent = config.agent || {};
 
-      const agentBody = readAgentPrompt("superpowers.md");
-      const skillBody = readSkillContent("using-superpowers");
-      const fullPrompt = [agentBody, skillBody].filter(Boolean).join("\n\n");
+      for (const name of agentNames) {
+        const md = readMarkdownFile(path.join(agentsDir, `${name}.md`));
+        if (!md || !md.frontmatter) continue;
 
-      if (!config.agent["superpowers"]) {
-        // Fresh registration: no existing superpowers agent
-        if (fullPrompt) {
-          config.agent["superpowers"] = {
-            mode: "primary",
-            description:
-              "Primary agent for the Superpowers development methodology. Use for structured software development with brainstorming, spec-driven planning, subagent-driven TDD implementation, and code review.",
-            permission: {
-              skill: { "*": "allow" },
-              task: {
-                "*": "deny",
-                "superpowers-*": "allow",
-                explore: "allow",
-                general: "allow"
-              },
-              webfetch: "ask"
-            },
-            prompt: fullPrompt
-          };
+        const fm = parseYaml(md.frontmatter);
+
+        // Prompt: subagents use their own body; primary agent uses SKILL.md content
+        let prompt = md.body;
+        if (name === 'superpowers') {
+          const skillMd = readMarkdownFile(
+            path.join(repoRoot, 'skills', 'using-superpowers', 'SKILL.md')
+          );
+          if (skillMd) prompt = skillMd.body;
         }
-      } else if (fullPrompt) {
-        // Agent already exists (likely auto-discovered from
-        // .opencode/agents/superpowers.md). If its prompt is the
-        // stub (short and mentions "injected by the plugin"),
-        // replace it with the full methodology content. If the
-        // user defined their own superpowers agent with a custom
-        // prompt, respect that and leave it alone.
-        const existingPrompt = typeof config.agent["superpowers"].prompt === 'string'
-          ? config.agent["superpowers"].prompt
-          : '';
-        const isStub = existingPrompt.length < 200 &&
-          existingPrompt.includes("injected by the plugin");
 
-        if (isStub) {
-          config.agent["superpowers"].prompt = fullPrompt;
-        }
-      }
+        config.agent[name] = {
+          mode: fm.mode || 'all',
+          description: fm.description || '',
+          prompt
+        };
 
-      if (!config.agent["superpowers-implement"]) {
-        const prompt = readAgentPrompt("superpowers-implement.md");
-        if (prompt) {
-          config.agent["superpowers-implement"] = {
-            mode: "subagent",
-            description:
-              "Implement a single task from a plan with test-driven development and self-review. Dispatched by the superpowers primary agent per task.",
-            permission: {
-              edit: "allow",
-              bash: "allow",
-              webfetch: "allow"
-            },
-            prompt
-          };
-        }
-      }
-
-      if (!config.agent["superpowers-review-spec"]) {
-        const prompt = readAgentPrompt("superpowers-review-spec.md");
-        if (prompt) {
-          config.agent["superpowers-review-spec"] = {
-            mode: "subagent",
-            description:
-              "Review whether an implementation matches its specification. Checks for missing requirements, extra work, and misunderstandings.",
-            permission: {
-              edit: "deny",
-              bash: {
-                "*": "allow",
-                "git push*": "deny"
-              }
-            },
-            prompt
-          };
-        }
-      }
-
-      if (!config.agent["superpowers-review-code"]) {
-        const prompt = readAgentPrompt("superpowers-review-code.md");
-        if (prompt) {
-          config.agent["superpowers-review-code"] = {
-            mode: "subagent",
-            description:
-              "Review code quality, architecture, and testing of an implementation. Dispatched AFTER spec compliance review passes.",
-            permission: {
-              edit: "deny",
-              bash: {
-                "*": "allow",
-                "git push*": "deny"
-              }
-            },
-            prompt
-          };
+        if (fm.permission) {
+          config.agent[name].permission = fm.permission;
         }
       }
     }
