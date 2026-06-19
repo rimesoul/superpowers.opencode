@@ -6,10 +6,10 @@
 
 ## Installation
 
-First, clone the repository:
+First, clone the repository to a location of your choice:
 
 ```bash
-git clone https://github.com/rimesoul/superpowers.opencode.git ~/superpowers.opencode
+git clone https://github.com/rimesoul/superpowers.opencode.git /path/to/superpowers.opencode
 ```
 
 Then choose one of the following methods to register the plugin.
@@ -20,23 +20,17 @@ Add the plugin to your global config (`~/.config/opencode/opencode.json` or `ope
 
 ```json
 {
-  "plugin": ["~/superpowers.opencode/.opencode/plugins/superpowers.js"]
+  "plugin": ["/path/to/superpowers.opencode/.opencode/plugins/superpowers.js"]
 }
 ```
 
-Or to your project config (`<project>/.opencode/opencode.json` or `opencode.jsonc`):
-
-```json
-{
-  "plugin": ["/absolute/path/to/superpowers.opencode/.opencode/plugins/superpowers.js"]
-}
-```
+Or to your project config (`<project>/.opencode/opencode.json` or `opencode.jsonc`), using the same path.
 
 ### Method B: Symlink
 
 ```bash
 mkdir -p ~/.config/opencode/plugins
-ln -s ~/superpowers.opencode/.opencode/plugins/superpowers.js ~/.config/opencode/plugins/superpowers.js
+ln -s /path/to/superpowers.opencode/.opencode/plugins/superpowers.js ~/.config/opencode/plugins/superpowers.js
 ```
 
 ---
@@ -55,7 +49,7 @@ Verify by switching to the `superpowers` primary agent (Tab) and asking: "What s
 ## Updating
 
 ```bash
-cd ~/superpowers.opencode
+cd /path/to/superpowers.opencode
 git pull origin main
 ```
 
