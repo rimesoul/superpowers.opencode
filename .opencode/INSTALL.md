@@ -6,14 +6,40 @@
 
 ## Installation
 
-Clone and symlink:
+First, clone the repository:
 
 ```bash
 git clone https://github.com/rimesoul/superpowers.opencode.git ~/superpowers.opencode
+```
 
+Then choose one of the following methods to register the plugin.
+
+### Method A: opencode.json / opencode.jsonc (recommended)
+
+Add the plugin to your global config (`~/.config/opencode/opencode.json` or `opencode.jsonc`):
+
+```json
+{
+  "plugin": ["~/superpowers.opencode/.opencode/plugins/superpowers.js"]
+}
+```
+
+Or to your project config (`<project>/.opencode/opencode.json` or `opencode.jsonc`):
+
+```json
+{
+  "plugin": ["/absolute/path/to/superpowers.opencode/.opencode/plugins/superpowers.js"]
+}
+```
+
+### Method B: Symlink
+
+```bash
 mkdir -p ~/.config/opencode/plugins
 ln -s ~/superpowers.opencode/.opencode/plugins/superpowers.js ~/.config/opencode/plugins/superpowers.js
 ```
+
+---
 
 Restart OpenCode. The plugin registers all skills and agents automatically.
 
